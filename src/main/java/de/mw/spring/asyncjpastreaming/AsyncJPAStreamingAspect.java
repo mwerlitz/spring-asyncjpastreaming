@@ -3,6 +3,7 @@ package de.mw.spring.asyncjpastreaming;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -30,15 +31,15 @@ class AsyncJPAStreamingAspect {
     @SuppressWarnings("unchecked")
     @SneakyThrows
     protected <T> Stream<T> getStream(ProceedingJoinPoint joinPoint) {
-        Object result = joinPoint.proceed();
-        if (result instanceof Stream) {
-            return (Stream<T>) result;
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (!signature.getReturnType().isAssignableFrom(Stream.class)) {
+            throw new ClassCastException("AsyncJPAStreaming aspect can only applied to repository methods with return type of java.util.Stream");
         }
-        throw new ClassCastException("AsyncJPAStreaming aspect can only applied to repository methods with return type of java.util.Stream");
+        return (Stream<T>) joinPoint.proceed();
     }
 
     @Around("@annotation(AsyncJPAStreaming)")
-    public <T> Stream<T> asycJPAStreaming(ProceedingJoinPoint joinPoint) throws Throwable {
+    public <T> Stream<T> asyncJPAStreaming(ProceedingJoinPoint joinPoint) throws Throwable {
         return streamingSupport.streamAsyncReadonly(() -> getStream(joinPoint));
     }
 
