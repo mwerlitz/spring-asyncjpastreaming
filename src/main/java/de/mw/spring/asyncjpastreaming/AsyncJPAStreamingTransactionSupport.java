@@ -1,20 +1,20 @@
 package de.mw.spring.asyncjpastreaming;
 
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-
-import javax.sql.DataSource;
+import com.oath.cyclops.async.adapters.Queue;
 
 import org.slf4j.MDC;
 import org.springframework.boot.jdbc.metadata.DataSourcePoolMetadataProvider;
+import org.springframework.boot.task.TaskExecutorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.oath.cyclops.async.adapters.Queue;
+import javax.sql.DataSource;
+
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * Async and transactional support for {@link AsyncJPAStreaming} aspect.
@@ -66,15 +66,14 @@ class AsyncJPAStreamingTransactionSupport {
      * Also copies the {@link MDC} from the calling thread to the async thread.
      */
     @Bean(name = "asyncJPAStreamingTaskExecutor")
-    public Executor threadPoolTaskExecutor(DataSourcePoolMetadataProvider meta, DataSource dataSource) {
+    public Executor threadPoolTaskExecutor(DataSourcePoolMetadataProvider meta, DataSource dataSource, TaskExecutorBuilder builder) {
         int threads = meta.getDataSourcePoolMetadata(dataSource).getMax();
         
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setThreadNamePrefix("asyncJPA-");
-        executor.setCorePoolSize(threads);
-        executor.setMaxPoolSize(threads);
-        executor.setTaskDecorator(new MdcTaskDecorator());
-        return executor;
+        return builder.threadNamePrefix("asyncJPA-")
+                      .corePoolSize(threads)
+                      .maxPoolSize(threads)
+                      .taskDecorator(new MdcTaskDecorator())
+                      .build();
     }
-    
+
 }
