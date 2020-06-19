@@ -1,6 +1,10 @@
 package de.mw.spring.asyncjpastreaming;
 
-import com.oath.cyclops.async.adapters.Queue;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import javax.sql.DataSource;
 
 import org.slf4j.MDC;
 import org.springframework.boot.jdbc.metadata.DataSourcePoolMetadataProvider;
@@ -10,11 +14,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sql.DataSource;
-
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
+import com.oath.cyclops.async.adapters.Queue;
 
 /**
  * Async and transactional support for {@link AsyncJPAStreaming} aspect.
@@ -53,6 +53,10 @@ class AsyncJPAStreamingTransactionSupport {
     protected <T> void streamToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier) {
         try (Stream<T> entityStream = repositorySupplier.get()) {
             queue.fromStream(entityStream);
+        } catch (Exception e) {
+            queue.addError(e);
+            throw e;
+        } finally {
             queue.close();
         }
     }
