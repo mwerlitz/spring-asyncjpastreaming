@@ -30,6 +30,9 @@ import java.util.stream.Stream;
  * and latency is also low because writing out the response can start already after fetching and processing 
  * the first batch of result set entries.
  * </p>
+ * <p>
+ * Make sure you enable {@link Async} via {@link org.springframework.scheduling.annotation.EnableAsync}.
+ * </p>
  * Be sure to set a clever JDBC fetch size for optimal performance with query hints for your underlying database, e.g.:
  * <pre>
  * @QueryHints(value = {
