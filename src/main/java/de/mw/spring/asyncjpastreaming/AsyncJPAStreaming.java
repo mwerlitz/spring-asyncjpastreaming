@@ -3,7 +3,7 @@ package de.mw.spring.asyncjpastreaming;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.Query;
+import jakarta.persistence.Query;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -33,9 +33,9 @@ import java.util.stream.Stream;
  * Be sure to set a clever JDBC fetch size for optimal performance with query hints for your underlying database, e.g.:
  * <pre>
  * @QueryHints(value = {
- *      @QueryHint(name = org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE, value = "1000"),
- *      @QueryHint(name = org.hibernate.jpa.QueryHints.HINT_CACHEABLE, value = "false"),
- *      @QueryHint(name = org.hibernate.jpa.QueryHints.HINT_READONLY, value = "true")
+ *      @QueryHint(name = org.hibernate.jpa.AvailableHints.HINT_FETCH_SIZE, value = "1000"),
+ *      @QueryHint(name = org.hibernate.jpa.AvailableHints.HINT_CACHEABLE, value = "false"),
+ *      @QueryHint(name = org.hibernate.jpa.AvailableHints.HINT_READONLY, value = "true")
  * })
  * </pre>
  */

@@ -1,31 +1,27 @@
 package de.mw.spring.asyncjpastreaming;
 
 import com.oath.cyclops.async.adapters.Queue;
-
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.jdbc.metadata.DataSourcePoolMetadataProvider;
-import org.springframework.boot.task.TaskExecutorBuilder;
+import org.springframework.boot.task.ThreadPoolTaskExecutorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
 import javax.sql.DataSource;
-
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Async and transactional support for {@link AsyncJPAStreaming} aspect.
@@ -34,20 +30,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 class AsyncJPAStreamingTransactionSupport {
-    
+
     private static final int CLEAR_ENTITYMANAGER_INTERVAL = 1000;
-    
+
     private final EntityManager entityManager;
-    
+
     private ThreadPoolTaskExecutor executor;
-    
-    
+
+
     /**
      * Executes the given repository method asynchronously in a readonly transaction.
      * Uses an own threadPoolTaskExecutor.
-     * 
+     *
      * @param <T> entity type
-     * @param queue communication bridge between calling and the async thread 
+     * @param queue communication bridge between calling and the async thread
      * @param repositorySupplier repository method returning a {@link Stream} of entities
      * @return CompletableFuture used to transport an exception if the async thread fails (e.g. when there is a connection timeout)
      */
@@ -57,13 +53,13 @@ class AsyncJPAStreamingTransactionSupport {
         streamToQueue(queue, repositorySupplier, clearEntityManager);
         return CompletableFuture.completedFuture(null);
     }
-    
+
     /**
      * Executes the given repository method asynchronously in a transaction.
      * Uses an own threadPoolTaskExecutor.
-     * 
+     *
      * @param <T> entity type
-     * @param queue communication bridge between calling and the async thread 
+     * @param queue communication bridge between calling and the async thread
      * @param repositorySupplier repository method returning a {@link Stream} of entities
      * @return CompletableFuture used to transport an exception if the async thread fails (e.g. when there is a connection timeout)
      */
@@ -77,10 +73,10 @@ class AsyncJPAStreamingTransactionSupport {
     /**
      * Executes the given repository method synchronously in a readonly transaction.
      * This method effectively circumvents real streaming of data. Streaming is emulated via a temporary list.
-     * 
+     *
      * Data is stored temporary completely in the list to load all the data in the transaction.
      * It will behave like {@link TypedQuery#getResultList()}.
-     * 
+     *
      * @param <T> entity type
      * @param repositorySupplier repository method returning a {@link Stream} of entities
      */
@@ -88,14 +84,14 @@ class AsyncJPAStreamingTransactionSupport {
     public <T> Stream<T> streamTransactionalReadonly(Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
         return streamWithList(repositorySupplier, clearEntityManager);
     }
-    
+
     /**
      * Executes the given repository method synchronously in a transaction.
      * This method effectively circumvents real streaming of data. Streaming is emulated via a temporary list.
-     * 
+     *
      * Data is stored temporary completely in the list to load all the data in the transaction.
      * It will behave like {@link TypedQuery#getResultList()}.
-     * 
+     *
      * @param <T> entity type
      * @param repositorySupplier repository method returning a {@link Stream} of entities
      */
@@ -107,7 +103,7 @@ class AsyncJPAStreamingTransactionSupport {
     protected <T> void streamToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
         try (Stream<T> entityStream = repositorySupplier.get()) {
             AtomicInteger clearIntervalCounter = new AtomicInteger();
-            
+
             log.trace("Streaming JPA results asynchronously...");
             entityStream.forEach(item -> {
                 queue.offer(item);
@@ -124,23 +120,22 @@ class AsyncJPAStreamingTransactionSupport {
             queue.close();
         }
     }
-    
+
     protected <T> Stream<T> streamWithList(Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
         try (Stream<T> entityStream = repositorySupplier.get()) {
             AtomicInteger clearIntervalCounter = new AtomicInteger();
-            
+
             log.trace("Fetching and streaming JPA results synchronously...");
-            return entityStream.map(item -> {
+            return entityStream.peek(item -> {
                                    if (clearEntityManager) {
                                        clearEntityManager(clearIntervalCounter);
                                    }
-                                   return item;
-                               })
-                               .collect(Collectors.toList())
+                                })
+                               .toList()
                                .stream();
         }
     }
-    
+
     private void clearEntityManager(AtomicInteger clearIntervalCounter) {
         // clear the entity manager to reduce memory consumption
         // when streaming a large set of managed entity objects
@@ -160,10 +155,10 @@ class AsyncJPAStreamingTransactionSupport {
      * Produces an own specialized threadPoolTaskExecutor with a core/max pool size matching the max connection pool size of the datasource.
      */
     @Bean(name = "asyncJPAStreamingTaskExecutor")
-    public Executor threadPoolTaskExecutor(@Qualifier("hikariPoolDataSourceMetadataProvider") DataSourcePoolMetadataProvider meta, 
+    public Executor threadPoolTaskExecutor(@Qualifier("hikariPoolDataSourceMetadataProvider") DataSourcePoolMetadataProvider meta,
                                            @Value("${app.configuration.asyncjpastreaming.threads:}") Integer threads,
-                                           DataSource dataSource, 
-                                           TaskExecutorBuilder builder) {
+                                           DataSource dataSource,
+                                           ThreadPoolTaskExecutorBuilder builder) {
         if (threads == null) {
             threads = meta.getDataSourcePoolMetadata(dataSource).getMax();
         }
