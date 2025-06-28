@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -25,9 +26,9 @@ public class AsyncJPAStreamingSupport {
     private final boolean enabled;
 
 
-    public AsyncJPAStreamingSupport(AsyncJPAStreamingTransactionSupport transactionSupport,
-                                    @Value("${app.configuration.asyncjpastreaming.maxBufferCapacity:" + Integer.MAX_VALUE + "}") int maxBufferCapacity,
-                                    @Value("${app.configuration.asyncjpastreaming.enabled:true}") boolean enabled) {
+    AsyncJPAStreamingSupport(AsyncJPAStreamingTransactionSupport transactionSupport,
+                             @Value("${app.configuration.asyncjpastreaming.maxBufferCapacity:" + Integer.MAX_VALUE + "}") int maxBufferCapacity,
+                             @Value("${app.configuration.asyncjpastreaming.enabled:true}") boolean enabled) {
         this.transactionSupport = transactionSupport;
         this.maxBufferCapacity = maxBufferCapacity;
         this.enabled = enabled;
@@ -42,7 +43,7 @@ public class AsyncJPAStreamingSupport {
      * </p>
      * Uses a {@link LinkedBlockingQueue} for communication between this calling and the async thread.
      * So different IO threads will not depend on each other.
-     *
+     * <p>
      * When streaming is disabled the behaviour is emulated with fetching the whole stream to a List and
      * then returning the List's stream.
      *
@@ -58,16 +59,17 @@ public class AsyncJPAStreamingSupport {
             BlockingQueue<T> underlyingQueue = new LinkedBlockingQueue<>(capacity);
             Queue<T> queue = new Queue<>(underlyingQueue);
             if (readonly) {
-                transactionSupport.streamAsyncTransactionalReadonlyToQueue(queue, repositorySupplier, clearEntityManager); // async in other thread and transaction
+                transactionSupport.streamAsyncTransactionalReadonlyToQueue(queue, repositorySupplier, clearEntityManager) // async in other thread and transaction
+                        .exceptionally(handleException(queue));
             } else {
-                transactionSupport.streamAsyncTransactionalToQueue(queue, repositorySupplier, clearEntityManager); // async in other thread and transaction
+                transactionSupport.streamAsyncTransactionalToQueue(queue, repositorySupplier, clearEntityManager) // async in other thread and transaction
+                        .exceptionally(handleException(queue));
             }
 
             return queue.jdkStream()
                         .onClose(() -> {
                             // make sure we pass on the close action to the queue, otherwise a memory and connection leak
                             // will happen when the capacity of the queue is not unlimited
-
                             queue.close();
                             queue.closeAndClear();
                             underlyingQueue.clear();
@@ -79,6 +81,16 @@ public class AsyncJPAStreamingSupport {
                 return transactionSupport.streamTransactional(repositorySupplier, clearEntityManager); // same thread joining same transaction
             }
         }
+    }
+
+    private <T> Function<Throwable, Void> handleException(Queue<T> queue) {
+        return throwable -> {
+            if (queue.isOpen()) {
+                queue.addError(throwable);
+                queue.close();
+            }
+            return null;
+        };
     }
 
 }

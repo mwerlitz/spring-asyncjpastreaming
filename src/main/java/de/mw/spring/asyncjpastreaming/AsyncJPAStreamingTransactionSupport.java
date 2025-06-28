@@ -17,6 +17,7 @@ import javax.persistence.TypedQuery;
 import javax.sql.DataSource;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -48,11 +49,13 @@ class AsyncJPAStreamingTransactionSupport {
      * @param <T> entity type
      * @param queue communication bridge between calling and the async thread 
      * @param repositorySupplier repository method returning a {@link Stream} of entities
+     * @return CompletableFuture used to transport an exception if the async thread fails (e.g. when there is a connection timeout)
      */
     @Transactional(readOnly = true)
     @Async("asyncJPAStreamingTaskExecutor")
-    public <T> void streamAsyncTransactionalReadonlyToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
+    public <T> CompletableFuture<Void> streamAsyncTransactionalReadonlyToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
         streamToQueue(queue, repositorySupplier, clearEntityManager);
+        return CompletableFuture.completedFuture(null);
     }
     
     /**
@@ -62,11 +65,13 @@ class AsyncJPAStreamingTransactionSupport {
      * @param <T> entity type
      * @param queue communication bridge between calling and the async thread 
      * @param repositorySupplier repository method returning a {@link Stream} of entities
+     * @return CompletableFuture used to transport an exception if the async thread fails (e.g. when there is a connection timeout)
      */
     @Transactional
     @Async("asyncJPAStreamingTaskExecutor")
-    public <T> void streamAsyncTransactionalToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
+    public <T> CompletableFuture<Void> streamAsyncTransactionalToQueue(Queue<T> queue, Supplier<Stream<T>> repositorySupplier, boolean clearEntityManager) {
         streamToQueue(queue, repositorySupplier, clearEntityManager);
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
