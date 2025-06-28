@@ -4,8 +4,8 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.stream.Stream;
 
@@ -20,7 +20,6 @@ import lombok.SneakyThrows;
 @RequiredArgsConstructor
 class AsyncJPAStreamingAspect {
 
-    @Autowired
     private final AsyncJPAStreamingSupport streamingSupport;
 
 
@@ -38,9 +37,11 @@ class AsyncJPAStreamingAspect {
         return (Stream<T>) joinPoint.proceed();
     }
 
-    @Around("@annotation(AsyncJPAStreaming)")
-    public <T> Stream<T> asyncJPAStreaming(ProceedingJoinPoint joinPoint) throws Throwable {
-        return streamingSupport.streamAsyncReadonly(() -> getStream(joinPoint));
+    @Around("@annotation(annotation)")
+    public <T> Stream<T> asyncJPAStreaming(ProceedingJoinPoint joinPoint, AsyncJPAStreaming annotation) throws Throwable {
+        boolean readonly = TransactionSynchronizationManager.isCurrentTransactionReadOnly() ||
+                           !TransactionSynchronizationManager.isActualTransactionActive(); // default is readonly
+        return streamingSupport.streamAsync(() -> getStream(joinPoint), readonly, annotation.clearEntityManager(), annotation.bufferCapacity());
     }
 
 }

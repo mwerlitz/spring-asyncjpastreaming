@@ -9,6 +9,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -20,8 +21,7 @@ import java.util.stream.Stream;
  * <p>
  * <p>
  * If you want a non-readonly transaction or further processing of inside the transaction try to use
- * {@link AsyncJPAStreamingSupport#streamAsync(java.util.function.Supplier)} or 
- * {@link AsyncJPAStreamingSupport#streamAsyncReadonly(java.util.function.Supplier)} directly.
+ * {@link AsyncJPAStreamingSupport#streamAsync(Supplier, boolean, boolean, int)} directly.
  * </p>
  * <p>
  * This way of fetching of entities is most usefull when processing a large amount of data,
@@ -42,5 +42,16 @@ import java.util.stream.Stream;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface AsyncJPAStreaming {
+
+    /**
+     * Configure the buffer capacity of the underlying queue
+     */
+    int bufferCapacity() default Integer.MAX_VALUE;
+    
+    /**
+     * Clear the entity manager after 1000 items while streaming, default false.
+     * It is highly recommended to use it when streaming a large set of managed entities.
+     */
+    boolean clearEntityManager() default false;
 
 }
