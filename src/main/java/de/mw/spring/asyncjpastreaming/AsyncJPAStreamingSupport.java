@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Aspect implemenation for {@link AsyncJPAStreaming}
+ * Aspect implementation for {@link AsyncJPAStreaming}
  */
 @Component
 @RequiredArgsConstructor

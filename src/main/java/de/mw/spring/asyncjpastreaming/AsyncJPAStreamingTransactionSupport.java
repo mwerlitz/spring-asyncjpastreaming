@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 class AsyncJPAStreamingTransactionSupport {
     
     /**
-     * Executes the given repository method asyncronously in a readonly transaction.
+     * Executes the given repository method asynchronously in a readonly transaction.
      * Uses an own threadPoolTaskExecutor.
      * 
      * @param <T> entity type
@@ -37,7 +37,7 @@ class AsyncJPAStreamingTransactionSupport {
     }
     
     /**
-     * Executes the given repository method asyncronously in a transaction.
+     * Executes the given repository method asynchronously in a transaction.
      * Uses an own threadPoolTaskExecutor.
      * 
      * @param <T> entity type

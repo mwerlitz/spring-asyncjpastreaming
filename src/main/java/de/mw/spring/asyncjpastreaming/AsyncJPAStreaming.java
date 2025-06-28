@@ -19,18 +19,18 @@ import java.util.stream.Stream;
  * Wrapping the call inside a {@link Transactional} method will not help, as the processing is async.
  * <p>
  * <p>
- * If you want a non-readonly transaction or futher processing of inside the transaction try to use
+ * If you want a non-readonly transaction or further processing of inside the transaction try to use
  * {@link AsyncJPAStreamingSupport#streamAsync(java.util.function.Supplier)} or 
  * {@link AsyncJPAStreamingSupport#streamAsyncReadonly(java.util.function.Supplier)} directly.
  * </p>
  * <p>
- * This way of fetching of entities is most usefull when processing a large ammount of data,
+ * This way of fetching of entities is most usefull when processing a large amount of data,
  * e.g. for streaming mapped entities to a REST client. To make most of it use the stream up to the
- * serialization layer (Jackson). This way memory consumtion and GC activity stays low even with many mapping steps inbetween
+ * serialization layer (Jackson). This way memory consumption and GC activity stays low even with many mapping steps inbetween
  * and latency is also low because writing out the response can start already after fetching and processing 
  * the first batch of result set entries.
  * </p>
- * Be sure to set a clever JDBC fetch size for optimal performance with query hints an your underlying database, e.g.:
+ * Be sure to set a clever JDBC fetch size for optimal performance with query hints for your underlying database, e.g.:
  * <pre>
  * @QueryHints(value = {
  *      @QueryHint(name = org.hibernate.jpa.QueryHints.HINT_FETCH_SIZE, value = "1000"),

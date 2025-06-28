@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 
 /**
- * Aspect implemenation for {@link AsyncJPAStreaming}
+ * Aspect implementation for {@link AsyncJPAStreaming}
  */
 @Aspect
 @Component
